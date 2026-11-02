@@ -1,1 +1,7 @@
+MIDlet-1: RPG Mundo Abierto, , MainMIDlet
+MIDlet-Name: RPGE72
+MIDlet-Vendor: Desarrollador E72
+MIDlet-Version: 1.0.0
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
 
