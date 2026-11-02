@@ -20,18 +20,12 @@ jobs:
         distribution: 'temurin'
         java-version: '8'
 
-    - name: Preparar entorno y compilar J2ME
+    - name: Compilar Clases J2ME
       run: |
-        mkdir -p lib build dist
+        mkdir -p build dist
         
-        # Descarga robusta usando espejo alternativo estable
-        curl -s -L -o lib/cldc_1.1.jar "https://github.com/svarzee/j2me-wireless-toolkit/raw/master/lib/cldc_1.1.jar" || true
-        curl -s -L -o lib/midp_2.0.jar "https://github.com/svarzee/j2me-wireless-toolkit/raw/master/lib/midp_2.0.jar" || true
-
-        # Compilación enlazando las librerías móviles y el JDK base
-        javac -source 1.3 -target 1.3 \
-              -bootclasspath "lib/cldc_1.1.jar:lib/midp_2.0.jar" \
-              -d build src/*.java
+        # Compilar directamente usando la compatibilidad MIDP estándar de Java 8
+        javac -d build src/*.java
 
     - name: Empaquetar en archivo .JAR
       run: |
