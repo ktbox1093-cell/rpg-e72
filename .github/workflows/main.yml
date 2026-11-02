@@ -20,40 +20,47 @@ jobs:
         distribution: 'temurin'
         java-version: '8'
 
-    - name: Generar Stubs J2ME Locales y Compilar
+    - name: Compilar Juego
       run: |
-        mkdir -p stubs/javax/microedition/lcdui stubs/javax/microedition/midlet build dist
+        mkdir -p stubs_src/javax/microedition/lcdui stubs_src/javax/microedition/midlet
+        mkdir -p build_stubs build_game dist
         
-        # Crear clases MIDP simuladas con visibilidad protected correcta
-        echo 'package javax.microedition.midlet;' > stubs/javax/microedition/midlet/MIDlet.java
-        echo 'public abstract class MIDlet { protected MIDlet() {} protected abstract void startApp(); protected abstract void pauseApp(); protected abstract void destroyApp(boolean unconditional); public final void notifyDestroyed() {} public final void notifyPaused() {} public final String getAppProperty(String key) { return null; } }' >> stubs/javax/microedition/midlet/MIDlet.java
+        echo 'package javax.microedition.midlet;' > stubs_src/javax/microedition/midlet/MIDlet.java
+        echo 'public abstract class MIDlet { protected MIDlet() {} protected abstract void startApp(); protected abstract void pauseApp(); protected abstract void destroyApp(boolean unconditional); public final void notifyDestroyed() {} public final void notifyPaused() {} public final String getAppProperty(String key) { return null; } }' >> stubs_src/javax/microedition/midlet/MIDlet.java
 
-        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Display.java
-        echo 'public class Display { public static Display getDisplay(Object m) { return null; } public void setCurrent(Displayable d) {} }' >> stubs/javax/microedition/lcdui/Display.java
+        echo 'package javax.microedition.lcdui;' > stubs_src/javax/microedition/lcdui/Display.java
+        echo 'public class Display { public static Display getDisplay(Object m) { return null; } public void setCurrent(Displayable d) {} }' >> stubs_src/javax/microedition/lcdui/Display.java
 
-        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Displayable.java
-        echo 'public abstract class Displayable {}' >> stubs/javax/microedition/lcdui/Displayable.java
+        echo 'package javax.microedition.lcdui;' > stubs_src/javax/microedition/lcdui/Displayable.java
+        echo 'public abstract class Displayable {}' >> stubs_src/javax/microedition/lcdui/Displayable.java
 
-        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Canvas.java
-        echo 'public abstract class Canvas extends Displayable { public static final int UP=1, DOWN=6, LEFT=2, RIGHT=5, FIRE=8, KEY_NUM1=49, KEY_NUM2=50, KEY_NUM4=52, KEY_NUM6=54, KEY_NUM8=56; public void setFullScreenMode(boolean mode) {} public int getWidth() { return 320; } public int getHeight() { return 240; } protected abstract void paint(Graphics g); protected void keyPressed(int keyCode) {} public int getGameAction(int keyCode) { return 0; } public void repaint() {} }' >> stubs/javax/microedition/lcdui/Canvas.java
+        echo 'package javax.microedition.lcdui;' > stubs_src/javax/microedition/lcdui/Canvas.java
+        echo 'public abstract class Canvas extends Displayable { public static final int UP=1, DOWN=6, LEFT=2, RIGHT=5, FIRE=8, KEY_NUM1=49, KEY_NUM2=50, KEY_NUM4=52, KEY_NUM6=54, KEY_NUM8=56; public void setFullScreenMode(boolean mode) {} public int getWidth() { return 320; } public int getHeight() { return 240; } protected abstract void paint(Graphics g); protected void keyPressed(int keyCode) {} public int getGameAction(int keyCode) { return 0; } public void repaint() {} }' >> stubs_src/javax/microedition/lcdui/Canvas.java
 
-        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Graphics.java
-        echo 'public class Graphics { public static final int TOP=32, LEFT=8; public void setColor(int r, int g, int b) {} public void setColor(int rgb) {} public void fillRect(int x, int y, int w, int h) {} public void drawRect(int x, int y, int w, int h) {} public void drawString(String str, int x, int y, int anchor) {} public void setFont(Font font) {} }' >> stubs/javax/microedition/lcdui/Graphics.java
+        echo 'package javax.microedition.lcdui;' > stubs_src/javax/microedition/lcdui/Graphics.java
+        echo 'public class Graphics { public static final int TOP=32, LEFT=8; public void setColor(int r, int g, int b) {} public void setColor(int rgb) {} public void fillRect(int x, int y, int w, int h) {} public void drawRect(int x, int y, int w, int h) {} public void drawString(String str, int x, int y, int anchor) {} public void setFont(Font font) {} }' >> stubs_src/javax/microedition/lcdui/Graphics.java
 
-        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Font.java
-        echo 'public class Font { public static final int FACE_SYSTEM=0, STYLE_PLAIN=0, STYLE_BOLD=1, SIZE_SMALL=8; public static Font getFont(int face, int style, int size) { return null; } }' >> stubs/javax/microedition/lcdui/Font.java
+        echo 'package javax.microedition.lcdui;' > stubs_src/javax/microedition/lcdui/Font.java
+        echo 'public class Font { public static final int FACE_SYSTEM=0, STYLE_PLAIN=0, STYLE_BOLD=1, SIZE_SMALL=8; public static Font getFont(int face, int style, int size) { return null; } }' >> stubs_src/javax/microedition/lcdui/Font.java
 
-        # Compilar los stubs primero
-        javac -d build stubs/javax/microedition/midlet/MIDlet.java stubs/javax/microedition/lcdui/*.java
+        javac -d build_stubs stubs_src/javax/microedition/midlet/*.java stubs_src/javax/microedition/lcdui/*.java
+        javac -cp "build_stubs" -d build_game src/*.java
 
-        # Compilar el código del juego usando classpath
-        javac -cp "build" -d build src/*.java
-
-    - name: Empaquetar en archivo .JAR
+    - name: Generar Manifiesto y Empaquetar
       run: |
-        jar cfm dist/RPGE72.jar MANIFEST.MF -C build .
+        # Generar un MANIFEST.MF perfecto con el salto de línea obligatorio al final
+        echo "Manifest-Version: 1.0" > MANIFEST_GENERADO.MF
+        echo "MicroEdition-Configuration: CLDC-1.1" >> MANIFEST_GENERADO.MF
+        echo "MicroEdition-Profile: MIDP-2.0" >> MANIFEST_GENERADO.MF
+        echo "MIDlet-1: RPGE72, , MainMIDlet" >> MANIFEST_GENERADO.MF
+        echo "MIDlet-Name: RPGE72" >> MANIFEST_GENERADO.MF
+        echo "MIDlet-Vendor: Creador" >> MANIFEST_GENERADO.MF
+        echo "MIDlet-Version: 1.0.0" >> MANIFEST_GENERADO.MF
+        echo "" >> MANIFEST_GENERADO.MF
+        
+        jar cfm dist/RPGE72.jar MANIFEST_GENERADO.MF -C build_game .
 
-    - name: Subir el archivo JAR como artefacto descargable
+    - name: Subir el archivo JAR como artefacto
       uses: actions/upload-artifact@v4
       with:
         name: RPGE72-Juego-NokiaE72
