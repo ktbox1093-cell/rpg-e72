@@ -1,139 +1,121 @@
-public class Player {
-    // Constantes de Clases
-    public static final int CLASS_KNIGHT = 0;
-    public static final int CLASS_THIEF = 1;
-    public static final int CLASS_ARCHER = 2;
+import javax.microedition.lcdui.Graphics;
+import java.util.Random;
 
-    private int classType;
-    private String name;
-    
-    // Sistema de Niveles y Experiencia (Límite: 1000)
-    private int level;
-    private long exp;
-    private long expNext;
-    
-    // Atributos de Combate
-    private int hp, maxHp;
-    private int mp, maxMp;
-    private int baseAtk, baseDef, baseSpd;
-    
-    // Posición en el mundo abierto (Coordenadas de mapa / tiles)
-    private int x, y;
-    private int direction; // 0: Abajo, 1: Arriba, 2: Izquierda, 3: Derecha
+public class World {
+    // Constantes de Biomas / Tipos de Terreno
+    public static final byte TILE_GRASS = 0;
+    public static final byte TILE_FOREST = 1;
+    public static final byte TILE_DESERT = 2;
+    public static final byte TILE_DUNGEON = 3;
+    public static final byte TILE_WATER = 4;
 
-    public Player(int classType, String name) {
-        this.classType = classType;
-        this.name = name;
-        this.level = 1;
-        this.exp = 0;
-        this.expNext = 150; // Experiencia inicial para nivel 2
-        
-        initClassStats();
-        this.hp = this.maxHp;
-        this.mp = this.maxMp;
+    // Dimensiones del mundo abierto
+    public static final int MAP_WIDTH = 64;
+    public static final int MAP_HEIGHT = 64;
+    public static final int TILE_SIZE = 16;
+
+    private byte[][] mapGrid;
+    private int screenWidth;
+    private int screenHeight;
+
+    public World(int screenWidth, int screenHeight) {
+        this.screenWidth = screenWidth;
+        this.screenHeight = screenHeight;
+        this.mapGrid = new byte[MAP_WIDTH][MAP_HEIGHT];
+        generateWorld();
     }
 
-    // Inicializa estadísticas base según la clase elegida
-    private void initClassStats() {
-        switch (classType) {
-            case CLASS_KNIGHT: // Tanque: Mucha vida y defensa, velocidad baja
-                maxHp = 180;
-                maxMp = 40;
-                baseAtk = 16;
-                baseDef = 22;
-                baseSpd = 3;
-                break;
-                
-            case CLASS_THIEF: // Ágil: Críticos altos, velocidad y evasión
-                maxHp = 110;
-                maxMp = 60;
-                baseAtk = 14;
-                baseDef = 10;
-                baseSpd = 7;
-                break;
-                
-            case CLASS_ARCHER: // Distancia: Daño constante, equilibrado
-                maxHp = 130;
-                maxMp = 50;
-                baseAtk = 18;
-                baseDef = 12;
-                baseSpd = 5;
-                break;
+    private void generateWorld() {
+        Random rand = new Random(1337);
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            for (int y = 0; y < MAP_HEIGHT; y++) {
+                if (x < 22 && y < 22) {
+                    mapGrid[x][y] = TILE_GRASS;
+                } else if (x >= 22 && x < 45 && y < 45) {
+                    mapGrid[x][y] = TILE_FOREST;
+                } else if (x >= 45) {
+                    mapGrid[x][y] = TILE_DESERT;
+                } else if (y >= 45) {
+                    mapGrid[x][y] = TILE_DUNGEON;
+                } else {
+                    int val = rand.nextInt(12);
+                    if (val == 0) {
+                        mapGrid[x][y] = TILE_WATER;
+                    } else {
+                        mapGrid[x][y] = TILE_GRASS;
+                    }
+                }
+            }
         }
     }
 
-    // Método para ganar experiencia y gestionar subidas de nivel hasta 1000
-    public void addExp(long amount) {
-        if (level >= 1000) return; // Tope máximo de nivel alcanzado
-        
-        exp += amount;
-        while (exp >= expNext && level < 1000) {
-            exp -= expNext;
-            levelUp();
+    public boolean isWalkable(int tileX, int tileY) {
+        if (tileX < 0 || tileX >= MAP_WIDTH || tileY < 0 || tileY >= MAP_HEIGHT) {
+            return false;
+        }
+        byte tile = mapGrid[tileX][tileY];
+        return tile != TILE_WATER;
+    }
+
+    public byte getTile(int tileX, int tileY) {
+        if (tileX < 0 || tileX >= MAP_WIDTH || tileY < 0 || tileY >= MAP_HEIGHT) {
+            return TILE_WATER;
+        }
+        return mapGrid[tileX][tileY];
+    }
+
+    public void render(Graphics g, int playerTileX, int playerTileY, int offsetX, int offsetY) {
+        int tilesVisibleX = screenWidth / TILE_SIZE + 2;
+        int tilesVisibleY = screenHeight / TILE_SIZE + 2;
+
+        int startX = playerTileX - (tilesVisibleX / 2);
+        int startY = playerTileY - (tilesVisibleY / 2);
+
+        if (startX < 0) startX = 0;
+        if (startY < 0) startY = 0;
+        if (startX > MAP_WIDTH - tilesVisibleX) startX = Math.max(0, MAP_WIDTH - tilesVisibleX);
+        if (startY > MAP_HEIGHT - tilesVisibleY) startY = Math.max(0, MAP_HEIGHT - tilesVisibleY);
+
+        for (int x = 0; x < tilesVisibleX; x++) {
+            for (int y = 0; y < tilesVisibleY; y++) {
+                int mapX = startX + x;
+                int mapY = startY + y;
+
+                if (mapX < MAP_WIDTH && mapY < MAP_HEIGHT) {
+                    byte tileType = mapGrid[mapX][mapY];
+                    
+                    int drawX = (x * TILE_SIZE) - (playerTileX * TILE_SIZE - (screenWidth / 2)) + offsetX;
+                    int drawY = (y * TILE_SIZE) - (playerTileY * TILE_SIZE - (screenHeight / 2)) + offsetY;
+
+                    drawTile(g, tileType, drawX, drawY);
+                }
+            }
         }
     }
 
-    private void levelUp() {
-        if (level >= 1000) return;
-        level++;
-        
-        // Crecimiento de atributos personalizado por clase al subir de nivel
-        switch (classType) {
-            case CLASS_KNIGHT:
-                maxHp += 30;
-                maxMp += 6;
-                baseAtk += 4;
-                baseDef += 5;
+    private void drawTile(Graphics g, byte tileType, int x, int y) {
+        switch (tileType) {
+            case TILE_GRASS:
+                g.setColor(34, 139, 34);
                 break;
-            case CLASS_THIEF:
-                maxHp += 18;
-                maxMp += 10;
-                baseAtk += 5;
-                baseDef += 2;
+            case TILE_FOREST:
+                g.setColor(0, 100, 0);
                 break;
-            case CLASS_ARCHER:
-                maxHp += 22;
-                maxMp += 8;
-                baseAtk += 6;
-                baseDef += 3;
+            case TILE_DESERT:
+                g.setColor(218, 165, 32);
+                break;
+            case TILE_DUNGEON:
+                g.setColor(80, 80, 80);
+                break;
+            case TILE_WATER:
+                g.setColor(30, 144, 255);
+                break;
+            default:
+                g.setColor(0, 0, 0);
                 break;
         }
-        
-        // Recompensa clásica de RPG: Curación completa al subir de nivel
-        hp = maxHp;
-        mp = maxMp;
-        
-        // Curva de experiencia exponencial suave compatible con CLDC 1.1 (Math.pow)
-        // Esto escala perfectamente desde el nivel 1 hasta el 1000 sin desbordar un tipo 'long'
-        expNext = (long)(150 * Math.pow(level, 1.25));
+        g.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        g.setColor(20, 20, 20);
+        g.drawRect(x, y, TILE_SIZE, TILE_SIZE);
     }
-
-    // Movimiento en el mundo abierto
-    public void move(int dx, int dy, int mapWidth, int mapHeight) {
-        x += dx;
-        y += dy;
-        // Limitar dentro de los bordes del mapa si es necesario
-        if (x < 0) x = 0;
-        if (y < 0) y = 0;
-        if (x >= mapWidth) x = mapWidth - 1;
-        if (y >= mapHeight) y = mapHeight - 1;
-    }
-
-    // Getters esenciales para el renderizado y la lógica de combate
-    public int getLevel() { return level; }
-    public long getExp() { return exp; }
-    public long getExpNext() { return expNext; }
-    public int getHp() { return hp; }
-    public int getMaxHp() { return maxHp; }
-    public int getMp() { return mp; }
-    public int getMaxMp() { return maxMp; }
-    public int getAtk() { return baseAtk + (level * 2); }
-    public int getDef() { return baseDef + level; }
-    public int getSpd() { return baseSpd; }
-    public int getX() { return x; }
-    public int getY() { return y; }
-    public void setPosition(int x, int y) { this.x = x; this.y = y; }
-    public String getName() { return name; }
-    public int getClassType() { return classType; }
 }
-
