@@ -20,24 +20,21 @@ jobs:
         distribution: 'temurin'
         java-version: '8'
 
-    - name: Descargar librerías J2ME automáticamente
+    - name: Descargar librerías J2ME y compilar
       run: |
-        mkdir -p lib
-        # Descargar stubs oficiales de CLDC 1.1 y MIDP 2.0 para evitar errores
-        curl -L -o lib/cldc_1.1.jar https://repo1.maven.org/maven2/net/sf/kxml/kxml2/2.3.0/kxml2-2.3.0.jar || true
-        # Como alternativa limpia, usamos un repositorio de stubs livianos:
+        mkdir -p lib build dist
+        
+        # Descargar stubs oficiales compatibles con CLDC 1.1 y MIDP 2.0
+        curl -L -o lib/cldc_1.1.jar https://github.com/mcpat/apistubs/raw/master/cldc-1.1/cldc-1.1-1.0.jar || true
         curl -L -o lib/midp_2.0.jar https://github.com/mcpat/apistubs/raw/master/midp-2.0/midp-2.0-1.0.jar || true
 
-    - name: Compilar clases Java para J2ME (CLDC 1.1)
-      run: |
-        mkdir -p build
-        # Si prefieres compilar sin bootclasspath estricto usando compatibilidad de código MIDP:
+        # Compilar usando las librerías J2ME descargadas automáticamente
         javac -source 1.3 -target 1.3 \
+              -bootclasspath "lib/cldc_1.1.jar:lib/midp_2.0.jar" \
               -d build src/*.java
 
     - name: Empaquetar en archivo .JAR
       run: |
-        mkdir -p dist
         jar cfm dist/RPGE72.jar MANIFEST.MF -C build .
 
     - name: Subir el archivo JAR como artefacto descargable
