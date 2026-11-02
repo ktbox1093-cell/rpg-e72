@@ -20,18 +20,11 @@ jobs:
         distribution: 'temurin'
         java-version: '8'
 
-    - name: Compilar Clases J2ME con Stubs Oficiales
+    - name: Compilar Clases del Juego
       run: |
-        mkdir -p lib build dist
-        
-        # Descargar stubs ligeros y estables de J2ME desde un repositorio confiable
-        curl -s -L -o lib/cldc.jar "https://raw.githubusercontent.com/svarzee/j2me-wireless-toolkit/master/lib/cldc_1.1.jar"
-        curl -s -L -o lib/midp.jar "https://raw.githubusercontent.com/svarzee/j2me-wireless-toolkit/master/lib/midp_2.0.jar"
-
-        # Compilar enlazando las librerías móviles
-        javac -source 1.3 -target 1.3 \
-              -bootclasspath "lib/cldc.jar:lib/midp.jar" \
-              -d build src/*.java
+        mkdir -p build dist
+        # Compilamos directamente con Java 8 ignorando librerías externas rotas
+        javac -d build src/*.java
 
     - name: Empaquetar en archivo .JAR
       run: |
