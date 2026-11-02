@@ -9,6 +9,11 @@ public class GameCanvas extends Canvas implements Runnable {
     private World world;
     private Enemy[] currentEnemies;
 
+    // Sprites procedurales de 16x16
+    private Image sprPlayer;
+    private Image sprNormalEnemy;
+    private Image sprBossEnemy;
+
     private static final int STATE_PLAYING = 0;
     private int gameState = STATE_PLAYING;
 
@@ -21,6 +26,50 @@ public class GameCanvas extends Canvas implements Runnable {
 
         world = new World();
         initEnemies();
+
+        // Generar los sprites por código en memoria
+        sprPlayer = createProceduralSprite(0);
+        sprNormalEnemy = createProceduralSprite(1);
+        sprBossEnemy = createProceduralSprite(2);
+    }
+
+    // Método que dibuja los píxeles uno por uno para armar el personaje y enemigos
+    private Image createProceduralSprite(int type) {
+        int width = 16;
+        int height = 16;
+        int[] rgbData = new int[width * height];
+        
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = y * width + x;
+                int color = 0x00000000; // Transparente por defecto
+                
+                if (type == 0) {
+                    // --- JUGADOR (Caballero verde y gris) ---
+                    if ((x >= 4 && x <= 11) && (y >= 2 && y <= 13)) {
+                        color = 0xFF00FF80; // Cuerpo
+                        if (y >= 3 && y <= 6 && x >= 5 && x <= 10) color = 0xFF303030; // Casco
+                        if (y == 5 && (x == 6 || x == 9)) color = 0xFFFFFFFF; // Ojos
+                    }
+                } else if (type == 1) {
+                    // --- ENEMIGO NORMAL (Goblin rojo) ---
+                    if ((x >= 3 && x <= 12) && (y >= 4 && y <= 13)) {
+                        color = 0xFFDC143C; // Rojo
+                        if (y == 6 && (x == 5 || x == 10)) color = 0xFFFFFF00; // Ojos amarillos
+                    }
+                } else {
+                    // --- JEFE / BOSS (Morado) ---
+                    if ((x >= 2 && x <= 13) && (y >= 2 && y <= 14)) {
+                        color = 0xFFBA55D3; // Morado
+                        if (y >= 4 && y <= 7 && x >= 4 && x <= 11) color = 0xFFFFD700; // Corona
+                    }
+                }
+                
+                rgbData[index] = color;
+            }
+        }
+        
+        return Image.createRGBImage(rgbData, width, height, true);
     }
 
     private void initEnemies() {
@@ -75,7 +124,6 @@ public class GameCanvas extends Canvas implements Runnable {
         int pY = player.getY();
 
         if (gameState == STATE_PLAYING) {
-            // Lee acción estándar o códigos directos de navegación de Symbian (-1, -2, -3, -4)
             if (action == UP || keyCode == -1 || keyCode == '2') {
                 if (world.isWalkable(pX, pY - 1)) player.move(0, -1, World.MAP_WIDTH, World.MAP_HEIGHT);
             } else if (action == DOWN || keyCode == -2 || keyCode == '8') {
@@ -91,8 +139,9 @@ public class GameCanvas extends Canvas implements Runnable {
     }
 
     protected void paint(Graphics g) {
-        int w = getWidth();
+        int w = getHeight() > getWidth() ? getWidth() : getWidth(); // Ancho seguro
         int h = getHeight();
+        w = getWidth();
 
         g.setColor(0, 0, 0);
         g.fillRect(0, 0, w, h);
@@ -109,20 +158,32 @@ public class GameCanvas extends Canvas implements Runnable {
                     int screenY = (currentEnemies[i].getY() * World.TILE_SIZE) - cameraY;
 
                     if (screenX >= -World.TILE_SIZE && screenX < w && screenY >= -World.TILE_SIZE && screenY < h) {
-                        if (currentEnemies[i].getType() == Enemy.TYPE_BOSS) g.setColor(255, 215, 0);
-                        else if (currentEnemies[i].getType() == Enemy.TYPE_SUB_BOSS) g.setColor(186, 85, 211);
-                        else g.setColor(220, 20, 60);
-                        
-                        g.fillRect(screenX + 1, screenY + 1, World.TILE_SIZE - 2, World.TILE_SIZE - 2);
+                        Image currentImg = sprNormalEnemy;
+                        if (currentEnemies[i].getType() == Enemy.TYPE_BOSS || currentEnemies[i].getType() == Enemy.TYPE_SUB_BOSS) {
+                            currentImg = sprBossEnemy;
+                        }
+
+                        if (currentImg != null) {
+                            g.drawImage(currentImg, screenX, screenY, Graphics.TOP | Graphics.LEFT);
+                        } else {
+                            g.setColor(220, 20, 60);
+                            g.fillRect(screenX + 1, screenY + 1, World.TILE_SIZE - 2, World.TILE_SIZE - 2);
+                        }
                     }
                 }
             }
 
             int playerScreenX = w / 2 - (World.TILE_SIZE / 2);
             int playerScreenY = h / 2 - (World.TILE_SIZE / 2);
-            g.setColor(0, 255, 128);
-            g.fillRect(playerScreenX + 1, playerScreenY + 1, World.TILE_SIZE - 2, World.TILE_SIZE - 2);
 
+            if (sprPlayer != null) {
+                g.drawImage(sprPlayer, playerScreenX, playerScreenY, Graphics.TOP | Graphics.LEFT);
+            } else {
+                g.setColor(0, 255, 128);
+                g.fillRect(playerScreenX + 1, playerScreenY + 1, World.TILE_SIZE - 2, World.TILE_SIZE - 2);
+            }
+
+            // HUD Superior
             g.setColor(0, 0, 0);
             g.fillRect(0, 0, w, 20);
             
