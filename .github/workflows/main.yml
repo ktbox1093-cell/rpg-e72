@@ -20,26 +20,36 @@ jobs:
         distribution: 'temurin'
         java-version: '8'
 
-    - name: Descargar stubs oficiales de J2ME y compilar
+    - name: Generar Stubs J2ME Locales y Compilar
       run: |
-        mkdir -p lib build dist
+        mkdir -p stubs/javax/microedition/lcdui stubs/javax/microedition/midlet build dist
         
-        # Descargar stubs limpios y funcionales para CLDC 1.1 y MIDP 2.0 desde Maven/GitHub oficial
-        curl -s -L -o lib/cldc_1.1.jar "https://repo1.maven.org/maven2/net/sf/kxml/kxml2/2.3.0/kxml2-2.3.0.jar" || true
-        
-        # Usar un stub garantizado para MIDP 2.0
-        curl -s -L -o lib/midp_2.0.jar "https://github.com/hex007/j2me-stubs/raw/master/midp-2.0.jar" || true
+        # Crear clases MIDP simuladas temporalmente para que el compilador las reconozca sin errores
+        echo 'package javax.microedition.midlet;' > stubs/javax/microedition/midlet/MIDlet.java
+        echo 'public abstract class MIDlet { protected MIDlet() {} public abstract void startApp(); public abstract void pauseApp(); public abstract void destroyApp(boolean unconditional); public final void notifyDestroyed() {} public final void notifyPaused() {} public final String getAppProperty(String key) { return null; } }' >> stubs/javax/microedition/midlet/MIDlet.java
 
-        # Si algún enlace falla, respaldamos creando un archivo jar válido con clases simuladas o usables
-        if [ ! -s lib/midp_2.0.jar ]; then
-          echo "Creando respaldo de stubs..."
-          touch lib/midp_2.0.jar
-        fi
+        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Display.java
+        echo 'public class Display { public static Display getDisplay(Object m) { return null; } public void setCurrent(Displayable d) {} }' >> stubs/javax/microedition/lcdui/Display.java
 
-        # Compilar enlazando las librerías móviles para que reconozca Display, Graphics y MIDlet
+        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Displayable.java
+        echo 'public abstract class Displayable {}' >> stubs/javax/microedition/lcdui/Displayable.java
+
+        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Canvas.java
+        echo 'public abstract class Canvas extends Displayable { public static final int UP=1, DOWN=6, LEFT=2, RIGHT=5, FIRE=8, KEY_NUM1=49, KEY_NUM2=50, KEY_NUM4=52, KEY_NUM6=54, KEY_NUM8=56; public void setFullScreenMode(boolean mode) {} public int getWidth() { return 320; } public int getHeight() { return 240; } protected abstract void paint(Graphics g); protected void keyPressed(int keyCode) {} public int getGameAction(int keyCode) { return 0; } public void repaint() {} }' >> stubs/javax/microedition/lcdui/Canvas.java
+
+        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Graphics.java
+        echo 'public class Graphics { public static final int TOP=32, LEFT=8; public void setColor(int r, int g, int b) {} public void setColor(int rgb) {} public void fillRect(int x, int y, int w, int h) {} public void drawRect(int x, int y, int w, int h) {} public void drawString(String str, int x, int y, int anchor) {} public void setFont(Font font) {} }' >> stubs/javax/microedition/lcdui/Graphics.java
+
+        echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Font.java
+        echo 'public class Font { public static final int FACE_SYSTEM=0, STYLE_PLAIN=0, STYLE_BOLD=1, SIZE_SMALL=8; public static Font getFont(int face, int style, int size) { return null; } }' >> stubs/javax/microedition/lcdui/Font.java
+
+        # Compilar los stubs primero
+        javac -d build stubs/javax/microedition/midlet/MIDlet.java stubs/javax/microedition/lcdui/*.java
+
+        # Compilar el código del juego usando los stubs como bootclasspath
         javac -source 1.3 -target 1.3 \
-              -bootclasspath "lib/cldc_1.1.jar:lib/midp_2.0.jar" \
-              -d build src/*.java || javac -d build src/*.java
+              -bootclasspath "build" \
+              -d build src/*.java
 
     - name: Empaquetar en archivo .JAR
       run: |
