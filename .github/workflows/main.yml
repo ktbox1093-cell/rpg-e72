@@ -44,10 +44,7 @@ jobs:
         echo 'package javax.microedition.lcdui;' > stubs_src/javax/microedition/lcdui/Font.java
         echo 'public class Font { public static final int FACE_SYSTEM=0, STYLE_PLAIN=0, STYLE_BOLD=1, SIZE_SMALL=8; public static Font getFont(int face, int style, int size) { return null; } }' >> stubs_src/javax/microedition/lcdui/Font.java
 
-        # Compilar stubs
         javac -d build_stubs stubs_src/javax/microedition/midlet/*.java stubs_src/javax/microedition/lcdui/*.java
-        
-        # Compilar el juego usando -cp para vincular correctamente
         javac -source 1.3 -target 1.3 -cp "build_stubs" -d build_game src/*.java
 
     - name: Generar Manifiesto y Empaquetar
