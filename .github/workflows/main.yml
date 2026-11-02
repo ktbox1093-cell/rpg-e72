@@ -24,9 +24,9 @@ jobs:
       run: |
         mkdir -p stubs/javax/microedition/lcdui stubs/javax/microedition/midlet build dist
         
-        # Crear clases MIDP simuladas esenciales
+        # Crear clases MIDP simuladas con visibilidad protected correcta
         echo 'package javax.microedition.midlet;' > stubs/javax/microedition/midlet/MIDlet.java
-        echo 'public abstract class MIDlet { protected MIDlet() {} public abstract void startApp(); public abstract void pauseApp(); public abstract void destroyApp(boolean unconditional); public final void notifyDestroyed() {} public final void notifyPaused() {} public final String getAppProperty(String key) { return null; } }' >> stubs/javax/microedition/midlet/MIDlet.java
+        echo 'public abstract class MIDlet { protected MIDlet() {} protected abstract void startApp(); protected abstract void pauseApp(); protected abstract void destroyApp(boolean unconditional); public final void notifyDestroyed() {} public final void notifyPaused() {} public final String getAppProperty(String key) { return null; } }' >> stubs/javax/microedition/midlet/MIDlet.java
 
         echo 'package javax.microedition.lcdui;' > stubs/javax/microedition/lcdui/Display.java
         echo 'public class Display { public static Display getDisplay(Object m) { return null; } public void setCurrent(Displayable d) {} }' >> stubs/javax/microedition/lcdui/Display.java
@@ -46,7 +46,7 @@ jobs:
         # Compilar los stubs primero
         javac -d build stubs/javax/microedition/midlet/MIDlet.java stubs/javax/microedition/lcdui/*.java
 
-        # Compilar el código del juego usando classpath (permitiendo que encuentre java.lang y los stubs a la vez)
+        # Compilar el código del juego usando classpath
         javac -cp "build" -d build src/*.java
 
     - name: Empaquetar en archivo .JAR
