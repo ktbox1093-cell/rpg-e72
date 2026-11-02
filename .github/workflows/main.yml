@@ -18,7 +18,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '11'
+        java-version: '8'   # <-- Cambiado a Java 8 para soportar CLDC 1.1
 
     - name: Compilar clases Java para J2ME (CLDC 1.1)
       run: |
